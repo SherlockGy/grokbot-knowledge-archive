@@ -10,9 +10,11 @@
 
 ## 主题索引
 
-- [新加坡基础教育：全球位置、与上海对比、代表性教学法](basic_education_singapore_comparison.md)：PISA/TIMSS 七国对比、上海与新加坡深度对比（含样本争议）、新加坡教学法；新加坡、上海、PISA、TIMSS、教学法；最后更新 2026-10-25。
+### 教育（education）
 
-（新增主题时在此追加一行：`- [主题名](文件名.md)：一句话摘要；关键词；最后更新 YYYY-MM-DD。`）
+- [新加坡基础教育：全球位置、与上海对比、代表性教学法](topics/education/basic_education_singapore_comparison.md)：PISA/TIMSS 七国对比、上海与新加坡深度对比（含样本争议）、新加坡教学法；新加坡、上海、PISA、TIMSS、教学法；最后更新 2026-10-25。
+
+（新增主题时在对应领域标题下追加一行：`- [主题名](topics/<领域>/<主题>.md)：一句话摘要；关键词；最后更新 YYYY-MM-DD。`）
 
 ## GitHub 归档与版本
 
