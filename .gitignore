@@ -1,0 +1,12 @@
+# 只提交知识资料，排除敏感信息与运行产物
+.env
+*.env
+*secret*
+*token*
+*.key
+*.pem
+.cache/
+__pycache__/
+*.tmp
+*.log
+.DS_Store
