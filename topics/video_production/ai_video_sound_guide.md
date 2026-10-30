@@ -2,7 +2,7 @@
 
 归档日期：2026-10-30。
 关键词：视频音效、配乐、混音、响度、LUFS、ffmpeg、Freesound、Pixabay、Kenney、Surge XT、sfizz、SoundFont、声画同步
-变更记录：2026-10-30 新建（整合 sxhzju/sound 三个工具与 J 的视频项目做法，改为 Agent 可独立执行的版本）。
+变更记录：2026-10-30 新建（整合 sxhzju/sound 三个工具与 J 的视频项目做法，改为 Agent 可独立执行的版本）；2026-10-30 二次核对，修正 21 处转述错误，补标 6 处起步值。
 
 > **给 Agent：** 这份文档是做视频声音时的操作参考。按章节查，照命令执行。所需工具和获取方式都写在本节。
 >
@@ -83,7 +83,7 @@ flowchart TD
     B -- 否 --> D{"UI 音效?<br/>点击 开关 提示音"}
     D -- 是 --> K["Kenney<br/>整组取同一个包"]
     D -- 否 --> E{"转场/冲击?<br/>riser whoosh boom"}
-    E -- 是 --> P["程序合成<br/>noise_sweep / sub_drop / 混响反打"]
+    E -- 是 --> P["程序合成<br/>noise_sweep / sub_drop / 反打镲"]
     E -- 否 --> F{"写实生活声?<br/>开门 纸张 瓶塞"}
     F -- 是 --> G["Pixabay → Freesound → Mixkit<br/>按 ♥/↓ 选，ffmpeg 体检"]
     F -- "抽象/物理碰撞" --> H["numpy 合成<br/>参数取自事件"]
@@ -110,7 +110,7 @@ flowchart TD
 
 | 组件 | 下载 | 版本 / 注意 |
 |---|---|---|
-| Surge XT | https://surge-synthesizer.github.io/downloads/ | 装 **VST3**；适配器按 1.3.4 验证 |
+| Surge XT | https://surge-synthesizer.github.io/downloads/ | 装 **VST3** 插件和 factory patches；适配器按 1.3.4 验证 |
 | sfizz | https://sfz.tools/sfizz/downloads/ | 装 **VST3**；适配器按 1.2.3 验证 |
 | VSCO 2 CE | https://versilian-studios.com/vsco-community/ | 选 **Vanilla SFZ Version / Direct Download** |
 | VCSL | https://versilian-studios.com/vcsl/ | 下载 SFZ 和完整样本 |
@@ -205,7 +205,7 @@ python3 "$S" get sfx/ px:123 fs:456 mk:789 kn:<pack>/<file>   # 一次传全部 
 | `--license cc0\|by\|any` | freesound | 许可证过滤 |
 | `--sort relevance\|downloads\|rating\|short` | freesound | 默认 relevance，再按下载量重排 |
 
-规则：**先搜再下。** `get` 依赖 `~/.cache/sfx-sources/index.json` 里的搜索结果；Kenney 要先跑 `kenney <pack>`。下载的文件名形如 `fs_<id>_<标题>.mp3`，非 CC0 的 Freesound 文件会打印 `credit <作者>`。
+规则：**先搜再下。** `get` 依赖 `~/.cache/sfx-sources/index.json` 里的搜索结果（只有 Mixkit 的 key 不搜也能下，但文件名里没有标题）；Kenney 要先跑 `kenney <pack>`。下载的文件名形如 `fs_<id>_<标题>.mp3`（标题转成短横线连接，最多 40 个字符），非 CC0 的 Freesound 文件会打印 `credit <作者>`。
 
 ### 3.1b 备用：直接用网页
 
@@ -223,7 +223,7 @@ python3 "$S" get sfx/ px:123 fs:456 mk:789 kn:<pack>/<file>   # 一次传全部 
 ### 3.2 选源顺序
 
 ```
-写实音效：Pixabay ──没有──▶ Freesound ──没有──▶ Mixkit
+写实音效：Pixabay ──没有──▶ Freesound ──没有──▶ Mixkit ──没有──▶ Kenney（游戏音效包）
 UI 音效 ：Kenney（同一段 UI 动作全部取自同一个包，听起来是一套）
 ```
 
@@ -249,7 +249,7 @@ ffmpeg -hide_banner -i "$f" -af astats -f null - 2>&1 | grep -Ei "peak level|rms
 ffmpeg -hide_banner -i "$f" -lavfi showspectrumpic=s=800x300 "${f%.*}_spec.png"                # 能量在高频还是低频
 ```
 
-`-45dB` 是经验阈值，按素材调。前导静音先切掉，起音点才能对准事件时刻：
+`-45dB` 是起步值，按素材调。前导静音先切掉，起音点才能对准事件时刻：
 
 ```sh
 ffmpeg -i "$f" -af "silenceremove=start_periods=1:start_threshold=-45dB" -c:a pcm_f32le -ar 48000 trimmed.wav
@@ -259,7 +259,7 @@ ffmpeg -i "$f" -af "silenceremove=start_periods=1:start_threshold=-45dB" -c:a pc
 
 | 现象 | 处理 |
 |---|---|
-| Freesound 超时 | `python3 "$T/sfx-sources/scripts/clash_freesound.py"`（只看状态）；`--fix` 会**改本机 ClashX Meta 配置并切节点**，只在 ClashX Meta（控制器 127.0.0.1:9090）环境用 |
+| Freesound 超时 | `python3 "$T/sfx-sources/scripts/clash_freesound.py"`（只看状态）；`--fix` 在规则缺失时会**改写本机 ClashX Meta 配置文件**（先存一份 `.bak-日期` 备份）并重载，然后**切到延迟最低的节点**。两种用法都只适用于 macOS 上的 ClashX Meta（控制器 127.0.0.1:9090），脚本靠 macOS 的 `defaults` 命令找配置文件 |
 | Freesound 很慢 | 单连接约 80 KB/s，把所有 key 放进同一条 `get` 并行下 |
 | Pixabay 返回 403 | Cloudflare 收紧了；改用网页搜索拿标题，或换 Freesound |
 
@@ -293,11 +293,11 @@ import audio_kit as ak          # ak.SR = 48000
 | `ak.render(plugin, [(midi, start_s, len_s, vel)], tail=2.0)` | 渲染成 `(2, n)` 数组 | **峰值归一化**，电平只由 `place` 决定 |
 | `ak.timeline(seconds)` | 空时间轴 | |
 | `ak.place(mix, audio, at, gain_db)` | 把声音放到 `at` 秒 | `at` 可为负 |
-| `ak.reverse(audio)` | 反打 | 先修掉两端静音，结尾正好落在放置点 |
+| `ak.reverse(audio)` | 反打 | 先修掉两端静音；放在 `砸点 - 长度/ak.SR` 处，结尾正好落在砸点 |
 | `ak.fade(audio, fade_in, fade_out)` | 淡入淡出 | |
 | `ak.trim(audio)` | 去两端静音 | |
-| `ak.noise_sweep(dur, f0, f1, seed=0)` | 带通噪声扫频 | f1>f0 = riser，f1<f0 = 下落 whoosh |
-| `ak.sub_drop(seconds=1.3, f0=73.42, f1=36.71)` | 下滑正弦轰鸣 | 冲击的低频 |
+| `ak.noise_sweep(seconds, f0=400, f1=9000, width_oct=1.1, curve=2.2, seed=0)` | 带通噪声扫频，峰值归一化 | f1>f0 = riser，f1<f0 = 下落 whoosh；音量按 (t/T)^curve 渐强，下落时也一样，要平的音量设 `curve=0` |
+| `ak.sub_drop(seconds=1.3, f0=73.42, f1=36.71, glide=0.7, decay=0.45, drive=1.5)` | 下滑正弦轰鸣 | 冲击的低频；`glide` 秒内从 f0 滑到 f1，按 `decay` 指数衰减 |
 | `ak.kweighted_db(audio, start, end)` | 一段的 K 加权响度 | 比较段落用它，别用 RMS |
 | `ak.master(mix)` | 限幅器固定推 2 dB，峰值到 -1 dBFS | 最后一步用 |
 | `ak.write(path, audio)` | 写 48 kHz / 24-bit WAV | |
@@ -332,7 +332,7 @@ ak.write("impact.wav", ak.master(ak.fade(mix, fade_out=0.6)))
 6 交付   48 kHz / 24-bit WAV + 生成脚本；写明同步点（例如"砸点在 3.43 s"）
 ```
 
-共享混响总线示例：
+共享混响总线示例（`room_size`、`wet_level` 是起步值）：
 
 ```python
 from pedalboard import Pedalboard, Reverb
@@ -362,7 +362,7 @@ import numpy as np, tinysoundfont as tsf
 SR = 48000
 syn = tsf.Synth(samplerate=SR)
 sfid = syn.sfload(open("GeneralUser-GS.sf2", "rb").read())
-syn.program_select(0, sfid, 0, 73, False)       # bank 0, GM 73 长笛；鼓组用 bank=128 并设 True
+syn.program_select(0, sfid, 0, 73, False)       # bank 0, 音色号 73（从 0 数）= 长笛；鼓组用 bank=128 并设 True
 
 def render(events, n):                          # events: [(t, kind, a, b)]
     out, pos = np.zeros((n, 2), np.float32), 0
@@ -384,13 +384,13 @@ def render(events, n):                          # events: [(t, kind, a, b)]
 
 | 画面属性 | 声音参数 |
 |---|---|
-| 材质 | 模态频率比和衰减，如木琴 `[1.0, 3.93, 9.24]` |
+| 材质 | 模态频率比和衰减，如调音后的马林巴木条 `[1.0, 3.93, 9.24]` |
 | 物体尺寸 / 设计音符 | 音高 |
-| 撞击强度 \|Δv\| | 力度：按同类事件中位数归一，限制在 0.35–1.4 |
+| 撞击强度 \|Δv\| | 力度：除以同类事件的中位数，取 0.6 次方，限制在 0.35–1.4 |
 | 横向位置 | 声像 pan |
 | 离镜头距离 | 轻微衰减 |
 
-一个事件类型写一个函数（`knock()`、`wind()`、`splash()`），参数全部来自事件表。whoosh/riser 用带通噪声扫频，boom 用下滑正弦加指数衰减，响度用 `pyloudnorm` 测。所有随机数固定种子（`np.random.default_rng(20261024)`、`random.Random(7)`），同样输入跑两次输出一致。
+一个事件类型写一个函数（`knock()`、`wind()`、`splash()`），参数全部来自事件表。whoosh/riser 用带通噪声扫频，boom 用下滑正弦加指数衰减，响度用 `pyloudnorm` 或 ffmpeg 测。所有随机数固定种子（`np.random.default_rng(20261024)`、`random.Random(7)`），同样输入跑两次输出一致。
 
 ---
 
@@ -429,7 +429,7 @@ ffmpeg -hide_banner -nostats -i vo.wav -af ebur128=peak=true -f null - 2>&1 | gr
 ffmpeg -i knock.wav -af "adelay=5100|5100,volume=-6dB,stereotools=balance_out=-0.2" -ar 48000 -c:a pcm_f32le knock_placed.wav
 ```
 
-**EQ 和压缩（旁白）**
+**EQ 和压缩（旁白，参数是起步值）**
 
 ```sh
 ffmpeg -i vo.wav -af "highpass=f=80,equalizer=f=300:t=q:w=1:g=-2,acompressor=threshold=-18dB:ratio=2:attack=10:release=200" -c:a pcm_f32le vo_eq.wav
@@ -446,7 +446,7 @@ ffmpeg -i music.wav -i vo_eq.wav -i sfx.wav -filter_complex "\
 -map "[out]" -ar 48000 -c:a pcm_f32le mix_pre.wav
 ```
 
-`threshold/ratio/attack/release` 是起点，按测量调：说话段旁白至少比配乐高约 10 LU。`apad` 让旁白键控信号补齐到配乐长度；不加时 sidechaincompress 在旁白结束处就停，后面的配乐会被截掉。
+`threshold/ratio/attack/release` 是起步值，按测量调：说话段旁白至少比配乐高约 10 LU。`apad` 让旁白键控信号补齐到配乐长度；不加时 sidechaincompress 在旁白结束处就停，后面的配乐会被截掉。
 
 **两遍 loudnorm**
 
@@ -458,7 +458,7 @@ ffmpeg -i mix_pre.wav -af "loudnorm=I=-16:TP=-1:LRA=11:measured_I=<input_i>:meas
   -ar 48000 -c:a pcm_s24le mix_final.wav
 ```
 
-第 2 遍输出里看 `Normalization Type`：显示 `Dynamic` 说明 linear 没生效（常见原因是素材 LRA 超过目标 LRA，或真峰值放不下）。这时调高 `LRA` 目标或先降峰值再跑。ffmpeg 的默认目标是 I=-24、TP=-2、LRA=7，**必须显式写**。`-ar 48000` 也必须写，loudnorm 内部会上采样。
+第 2 遍输出里看 `Normalization Type`：显示 `Dynamic` 说明 linear 没生效（常见原因是素材 LRA 超过目标 LRA，或真峰值放不下）。这时调高 `LRA` 目标或先降峰值再跑。ffmpeg 的默认目标是 I=-24、TP=-2、LRA=7，**必须显式写**。`-ar 48000` 也必须写，loudnorm 在 dynamic 模式下会上采样到 192 kHz。
 
 **复测交付文件 + 单声道检查**
 
@@ -473,7 +473,7 @@ ffmpeg -hide_banner -nostats -i mix_final.wav -af "pan=mono|c0=0.5*c0+0.5*c1,ebu
 |---|---|---|
 | 简单 | 有旁白时配乐乘固定系数 | ×0.38（约 -8.4 dB）；话前 0.25 s 开始压、话后 0.45 s 回升、0.2 s 平滑 |
 | 平滑 | 固定系数 + 包络 | ×0.42（约 -7.5 dB）；起 0.12 s、收 0.9 s；情绪最低段配乐再退 |
-| 精确 | 逐句按响度差计算 | 每句旁白比配乐高 ≥ 10 LU，迭代求压低量，最多 20 dB；说话时中频再让 4 dB、高频再让 2 dB；两句间隔 < 0.9 s 不回升；砸点贴着话头时先放过 0.10 s |
+| 精确 | 逐句按响度差计算 | 每句旁白比配乐高 ≥ 10 LU，迭代求压低量，最多 20 dB；说话时中频（250 Hz–5 kHz）再让 4 dB、高频（> 5 kHz）再让 2 dB；话前 0.10 s 压到位、话后 0.15 s 开始回升；两句间隔 < 0.9 s 不回升；砸点贴着话头时先放过 0.10 s |
 
 ### 5.4 响度目标
 
@@ -484,7 +484,7 @@ ffmpeg -hide_banner -nostats -i mix_final.wav -af "pan=mono|c0=0.5*c0+0.5*c1,ebu
 | 视频铺底、stinger 单独交付 | -16 到 -14 LUFS | 峰值 -1 dBFS |
 | 广播（EBU R128） | -23 LUFS | ≤ -1 dBTP |
 | 短音效 | 按峰值和上下文判断，不看 LUFS | |
-| 要压成 AAC | 目标不变 | 留到 -1.5 到 -2 dBTP 更稳 |
+| 要压成 AAC | 目标不变 | 起步值：留到 -1.5 到 -2 dBTP |
 
 ---
 
@@ -519,14 +519,14 @@ ffmpeg -framerate 30 -i frames/f%05d.png -i mix_final.wav \
 |---|---|---|---|
 | 程序合成 | 可以 | 不需要 | 写明"声音全部程序合成" |
 | CC0（Freesound CC0） | 可以 | 不需要 | 建议仍记录链接 |
-| CC BY（Freesound Attribution） | 可以 | **必须**：作者、作品名、链接、许可证 | `sfx.py get` 会打印 `credit <作者>` |
+| CC BY（Freesound Attribution） | 可以 | **必须**：作者、链接、许可证（作品名建议一并写） | `sfx.py get` 会打印 `credit <作者>` |
 | CC BY-NC | **不可以** | 必须 | 商用项目直接排除；`--license cc0\|by` 过滤掉 |
 | Pixabay | 可以 | 不需要 | 不能原样单独售卖或分发；含可识别商标的内容不能用于商品/服务的商业用途 |
-| Mixkit 音效 | 可以 | 不需要 | 不能单独再分发、做成素材包或模板；不能登记到版权管理系统（如 Content ID） |
+| Mixkit 音效 | 可以 | 不需要 | 不能原样单独再分发，也不能当素材、放进工具或模板、连同源文件再分发；不能声称是自己的作品，不能登记到任何版权管理服务（例如 YouTube Content ID） |
 | Kenney | 可以（CC0） | 不需要 | 不要用 Kenney 的 logo |
 | VSCO 2 CE | 可以（CC0） | 不需要 | |
 | VCSL | 可以（CC0） | 不需要 | |
-| GeneralUser GS | 可以，个人和商业音乐都行，可修改、可随软件打包 | 不需要 | 介绍它时不要直链作者的下载文件，链到作者网站或自带副本 |
+| GeneralUser GS | 可以，个人和商业音乐都行，可修改、可随软件打包 | 不需要 | 在自己网站上介绍它时不要直链作者的下载文件，链到作者网站或自带副本 |
 
 交付时生成一份署名清单：从事件表的 `source` 字段汇总非合成声音的作者、链接、许可证。
 
@@ -572,10 +572,10 @@ ffmpeg -framerate 30 -i frames/f%05d.png -i mix_final.wav \
 | VCSL 打击乐按键分演奏法 | "镲"弹出来是滚奏 | 先 `sfzmap`：Suspended Cymbal 1 是 60–63 弓擦、64–67 渐强滚奏、68 敲击、69 镲心；Mark Trees 60 上行、61 下行、62 快速上行 |
 | 用 RMS 比段落响度 | 被低频底鼓主导 | 用 `check` / `ak.kweighted_db` |
 | 求和后猛压限幅器 | 砸点被压平 | 用 `ak.master`（固定推 2 dB） |
-| Freesound 文件 | 只是约 190 kbps MP3 预览 | 正式作品要原始 WAV 需自己申请 Freesound API |
+| Freesound 文件 | 只是约 190 kbps MP3 预览 | 要原始文件：手动登录网站下载；脚本下载需要 Freesound API key 加 OAuth2（脚本没做） |
 | `clash_freesound.py --fix` | 改本机代理配置并切节点 | 只在 ClashX Meta 环境用；先跑不带参数的状态检查 |
-| 白噪声混响 | 尾巴嘶嘶 | 用模态混响或卷积混响，测尾巴 4–16 kHz 能量 |
-| 测 AAC 之后的峰值才发现超标 | 返工 | 在编码前的母带上测，真峰值留到 -1.5 dBTP 以下更稳 |
+| 用白噪声乘指数衰减做混响脉冲响应 | 每个音的尾巴都拖着宽带嘶嘶声 | 改用模态混响（高频衰减更快）；逐个音色测起音后 150–600 ms 尾部的 4–16 kHz 能量 |
+| 测 AAC 之后的峰值才发现超标 | 返工 | 在编码前的母带上测，真峰值留到 -1.5 dBTP 以下（起步值） |
 
 ---
 
@@ -597,13 +597,13 @@ ffmpeg -framerate 30 -i frames/f%05d.png -i mix_final.wav \
 
 ### 选声音
 - UI 音效先用 Kenney，同一段动作取同一个包。
-- 写实音效顺序：Pixabay → Freesound → Mixkit（首选 $S，备用网页）。按 ♥/↓ 和评分人数选（人数比平均分重要），
+- 写实音效顺序：Pixabay → Freesound → Mixkit → Kenney（首选 $S，备用网页）。按 ♥/↓ 和评分人数选（人数比平均分重要），
   向我报出数字并附 --urls 试听链接；描述里声源不符的直接淘汰。只有文件名的来源给 2–3 个候选。
 - 下载后用 ffprobe/ffmpeg 量时长、前导静音、尾巴和频谱，切掉前导静音再用。
 - 商用项目只用 CC0、CC BY、Pixabay、Mixkit、Kenney；排除 CC BY-NC。
 - 转场和冲击用 audio_kit：noise_sweep、sub_drop、ak.reverse（备用 numpy）。配乐用 Surge XT / sfizz，
   或 GeneralUser GS + tinysoundfont。
-- 每个有音高的音色先 audio_kit.py probe；VCSL 打击乐先 sfzmap；载入一律用 "Category/Name"。
+- 每个有音高的音色先 audio_kit.py probe；VCSL 打击乐先 sfzmap；Surge 预设一律用 "Category/Name" 载入。
 - 不运行 clash_freesound.py --fix，除非我同意。
 
 ### 混音
