@@ -1,6 +1,6 @@
 # 知识归档
 
-更新：2026-10-25。
+更新：2026-10-30。
 
 本仓库是管家（Grok Bot）为 J 查阅、维护和持续更新的知识档案库。把已经讨论清楚、值得长期复用的内容按主题整理，支持持续新增主题和增量更新已有档案。使用时先查下方主题索引，再按归档日期、证据版本和适用范围引用。
 
@@ -13,6 +13,10 @@
 ### 教育（education）
 
 - [新加坡基础教育：全球位置、与上海对比、代表性教学法](topics/education/basic_education_singapore_comparison.md)：PISA/TIMSS 七国对比、上海与新加坡深度对比（含样本争议）、新加坡教学法；新加坡、上海、PISA、TIMSS、教学法；最后更新 2026-10-25。
+
+### 视频制作（video_production）
+
+- [AI 做视频的音效指南](topics/video_production/ai_video_sound_guide.md)：给 Agent 照着执行的视频声音操作手册，覆盖找现成音效、程序合成配乐与音效、ffmpeg 混音与响度、声画同步、许可证和交付检查；音效、配乐、混音、LUFS、ffmpeg、Freesound、Pixabay、Kenney、Surge XT、sfizz、声画同步；最后更新 2026-10-30。
 
 （新增主题时在对应领域标题下追加一行：`- [主题名](topics/<领域>/<主题>.md)：一句话摘要；关键词；最后更新 YYYY-MM-DD。`）
 
